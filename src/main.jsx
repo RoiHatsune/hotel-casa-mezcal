@@ -19,6 +19,7 @@ import InventoryPage from './pages/Inventory'
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { supabase } from './api/supabase'
+import SetPassword from './pages/SetPassword'
 
 const queryClient = new QueryClient()
 
@@ -61,6 +62,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             <Route path="/daypasses" element={<DayPassesPage />} />
             <Route path="/billing" element={<BillingPage />} />
             <Route path="/inventory" element={<InventoryPage />} />
+            <Route path="/set-password" element={<SetPassword />} />
           </Route>
         </Routes>
       </BrowserRouter>
