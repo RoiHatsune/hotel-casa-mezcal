@@ -16,8 +16,33 @@ import ReservationsPage from './pages/Reservations'
 import DayPassesPage from './pages/DayPasses'
 import BillingPage from './pages/Billing'
 import InventoryPage from './pages/Inventory'
+import { useEffect, useState } from 'react'
+import { Navigate } from 'react-router-dom'
+import { supabase } from './api/supabase'
 
 const queryClient = new QueryClient()
+
+function ProtectedRoute({ children }) {
+  const [session, setSession] = useState(undefined)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session)
+    })
+    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
+      setSession(session)
+    })
+    return () => listener.subscription.unsubscribe()
+  }, [])
+
+  if (session === undefined) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0a1512', color: '#7ab8a8', fontSize: 14 }}>
+      Cargando...
+    </div>
+  )
+
+  return session ? children : <Navigate to="/login" replace />
+}
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -25,7 +50,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route element={<AppLayout />}>
+          <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/orders" element={<OrdersPage />} />
             <Route path="/menu" element={<MenuPage />} />
