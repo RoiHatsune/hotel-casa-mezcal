@@ -72,3 +72,11 @@ export const InventoryMovements = {
   list: () => supabase.from('inventory_movements').select('*, ingredients(name, unit)').order('created_at', { ascending: false }),
   create: (data) => supabase.from('inventory_movements').insert(data).select().single(),
 }
+
+export const InviteUser = async (email, full_name, role) => {
+  const { data, error } = await supabase.functions.invoke('invite-user', {
+    body: { email, full_name, role }
+  })
+  if (error) throw error
+  return data
+}

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { AppUsers } from '../api/entities'
+import { AppUsers, InviteUser } from '../api/entities'
 import { toast } from 'sonner'
 
 const ROLES = [
@@ -28,15 +28,23 @@ function UserModal({ open, onClose, user }) {
   const [active, setActive]     = useState(user?.active ?? true)
 
   const saveMutation = useMutation({
-    mutationFn: (data) =>
-      isEdit ? AppUsers.update(user.id, data) : AppUsers.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['app_users'] })
-      toast.success(isEdit ? 'Usuario actualizado' : 'Usuario creado')
-      onClose()
-    },
-    onError: (e) => toast.error('Error: ' + e.message),
-  })
+  mutationFn: async (data) => {
+    if (isEdit) {
+      return AppUsers.update(user.id, data)
+    } else {
+      return InviteUser(data.email, data.full_name, data.role)
+    }
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['app_users'] })
+    toast.success(isEdit
+      ? 'Usuario actualizado'
+      : `✉️ Invitación enviada — el usuario recibirá un correo para crear su contraseña`
+    )
+    onClose()
+  },
+  onError: (e) => toast.error('Error: ' + (e.message || 'No se pudo enviar la invitación')),
+})
 
   const handleSave = () => {
     if (!fullName.trim()) return toast.error('El nombre es obligatorio')
@@ -116,9 +124,11 @@ function UserModal({ open, onClose, user }) {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-          <button onClick={onClose} style={cancelBtn}>Cancelar</button>
           <button onClick={handleSave} disabled={saveMutation.isPending} style={saveBtn}>
-            {saveMutation.isPending ? 'Guardando...' : 'Guardar'}
+             {saveMutation.isPending
+               ? 'Enviando...'
+             : isEdit ? 'Guardar cambios' : '📧 Crear y enviar invitación'
+              }
           </button>
         </div>
       </div>
