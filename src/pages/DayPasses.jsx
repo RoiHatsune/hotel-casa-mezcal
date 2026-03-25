@@ -35,15 +35,20 @@ function DayPassModal({ open, onClose, dayPass }) {
   const total      = numPersons * PRICE_PER_PERSON
 
   const saveMutation = useMutation({
-    mutationFn: (data) =>
-      isEdit ? DayPasses.update(dayPass.id, data) : DayPasses.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['day_passes'] })
-      toast.success(isEdit ? 'Pasadía actualizada' : 'Pasadía registrada')
-      onClose()
-    },
-    onError: (e) => toast.error('Error: ' + e.message),
-  })
+  mutationFn: async (data) => {
+    const result = isEdit
+      ? await DayPasses.update(dayPass.id, data)
+      : await DayPasses.create(data)
+    if (result.error) throw new Error(result.error.message)
+    return result
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['day_passes'] })
+    toast.success(isEdit ? 'Pasadía actualizada' : 'Pasadía registrada')
+    onClose()
+  },
+  onError: (e) => toast.error('Error: ' + e.message),
+})
 
   const handleSave = () => {
     if (!guestName.trim())         return toast.error('El nombre es obligatorio')
