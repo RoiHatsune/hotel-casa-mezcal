@@ -4,7 +4,7 @@ export const translations = {
     nav_dashboard:    'Dashboard',
     nav_orders:       'Órdenes',
     nav_menu:         'Menú',
-    nav_billing:      'Facturación',
+    nav_billing:      'Transacciones',
     nav_rooms:        'Habitaciones',
     nav_reservations: 'Reservas',
     nav_daypasses:    'Pasadías',
@@ -134,7 +134,7 @@ export const translations = {
     cat_special:      'Especiales',
 
     // ── Facturación ───────────────────────────────────────────────────────────
-    billing_title:      'Facturación',
+    billing_title:      'Transacciones',
     billing_subtitle:   'Cierre de cuentas y cobros',
     billing_income_today: 'Ingresos hoy',
     billing_paid_today: 'Órdenes cobradas',
@@ -436,7 +436,7 @@ export const translations = {
     nav_dashboard:    'Dashboard',
     nav_orders:       'Orders',
     nav_menu:         'Menu',
-    nav_billing:      'Billing',
+    nav_billing:      'Transactions',
     nav_rooms:        'Rooms',
     nav_reservations: 'Reservations',
     nav_daypasses:    'Day Passes',
@@ -566,7 +566,7 @@ export const translations = {
     cat_special:      'Specials',
 
     // ── Billing ───────────────────────────────────────────────────────────────
-    billing_title:       'Billing',
+    billing_title:       'Transactions',
     billing_subtitle:    'Account closing and payments',
     billing_income_today:'Revenue today',
     billing_paid_today:  'Orders collected',
