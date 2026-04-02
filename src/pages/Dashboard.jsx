@@ -25,11 +25,11 @@ const formatDay = (dateStr, lang) => {
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
   return (
-    <div style={{ background: '#0f1f1c', border: '1px solid #1a3330', borderRadius: 10, padding: '10px 14px' }}>
-      <p style={{ margin: '0 0 6px', fontSize: 12, color: '#7ab8a8' }}>{label}</p>
+    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 10, padding: '10px 14px', boxShadow: '0 4px 12px rgba(0,0,0,.1)' }}>
+      <p style={{ margin: '0 0 6px', fontSize: 12, color: '#6b7280' }}>{label}</p>
       {payload.map((p, i) => (
         <p key={i} style={{ margin: '2px 0', fontSize: 13, fontWeight: 600, color: p.color }}>
-          {p.name}: {p.dataKey === 'total' || p.dataKey === 'ingresos' || p.dataKey === 'reservas' || p.dataKey === 'pasadias' || p.dataKey === 'restaurant' || p.dataKey === 'hospedaje' ? '$' : ''}{typeof p.value === 'number' ? p.value.toFixed(2) : p.value}
+          {p.name}: {['total','ingresos','reservas','pasadias','restaurant','hospedaje'].includes(p.dataKey) ? '$' : ''}{typeof p.value === 'number' ? p.value.toFixed(2) : p.value}
         </p>
       ))}
     </div>
@@ -38,12 +38,12 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 function StatCard({ label, value, sub, icon }) {
   return (
-    <div style={{ background: '#0f1f1c', borderRadius: 14, border: '1px solid #1a3330', padding: '18px 20px' }}>
+    <div style={{ background: 'white', borderRadius: 14, border: '1px solid #e5e7eb', padding: '18px 20px', boxShadow: '0 1px 4px rgba(0,0,0,.05)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <p style={{ margin: 0, fontSize: 13, color: '#7ab8a8' }}>{label}</p>
-          <p style={{ margin: '6px 0 0', fontSize: 26, fontWeight: 800, color: 'white' }}>{value}</p>
-          {sub && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#7ab8a8' }}>{sub}</p>}
+          <p style={{ margin: 0, fontSize: 13, color: '#6b7280' }}>{label}</p>
+          <p style={{ margin: '6px 0 0', fontSize: 26, fontWeight: 800, color: '#111' }}>{value}</p>
+          {sub && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280' }}>{sub}</p>}
         </div>
         <span style={{ fontSize: 26 }}>{icon}</span>
       </div>
@@ -53,9 +53,11 @@ function StatCard({ label, value, sub, icon }) {
 
 function ChartSection({ title, subtitle, children }) {
   return (
-    <div style={{ background: '#0f1f1c', borderRadius: 14, border: '1px solid #1a3330', padding: '20px 24px' }}>
-      <p style={{ margin: '0 0 2px', fontSize: 15, fontWeight: 700, color: 'white' }}>{title}</p>
-      {subtitle && <p style={{ margin: '0 0 20px', fontSize: 12, color: '#7ab8a8' }}>{subtitle}</p>}
+    <div style={{ background: 'white', borderRadius: 14, border: '1px solid #e5e7eb', padding: '20px 24px', boxShadow: '0 1px 4px rgba(0,0,0,.05)' }}>
+      <p style={{ margin: '0 0 2px', fontSize: 15, fontWeight: 700, color: '#111' }}>
+        {title}
+      </p>
+      {subtitle && <p style={{ margin: '0 0 20px', fontSize: 12, color: '#6b7280' }}>{subtitle}</p>}
       {!subtitle && <div style={{ marginBottom: 20 }} />}
       {children}
     </div>
@@ -126,11 +128,11 @@ export default function Dashboard() {
   })
 
   const roomStatusData = [
-    { name: t('room_available'),    value: rooms.filter(r => r.status === 'available').length },
-    { name: t('room_occupied'),     value: rooms.filter(r => r.status === 'occupied').length },
-    { name: t('room_cleaning'),     value: rooms.filter(r => r.status === 'cleaning').length },
-    { name: t('room_reserved'),     value: rooms.filter(r => r.status === 'reserved').length },
-    { name: t('room_maintenance'),  value: rooms.filter(r => r.status === 'maintenance').length },
+    { name: t('room_available'),   value: rooms.filter(r => r.status === 'available').length },
+    { name: t('room_occupied'),    value: rooms.filter(r => r.status === 'occupied').length },
+    { name: t('room_cleaning'),    value: rooms.filter(r => r.status === 'cleaning').length },
+    { name: t('room_reserved'),    value: rooms.filter(r => r.status === 'reserved').length },
+    { name: t('room_maintenance'), value: rooms.filter(r => r.status === 'maintenance').length },
   ].filter(d => d.value > 0)
 
   const consolidadoByDay = last7.map((date, i) => {
@@ -150,42 +152,44 @@ export default function Dashboard() {
     cancelled: t('status_cancelled'),
   }
 
+  const chartTooltipStyle = { background: 'white', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 12, color: '#111' }
+
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif' }}>
 
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0, color: 'white' }}>{t('dashboard_title')}</h1>
-        <p style={{ fontSize: 14, color: '#7ab8a8', margin: '4px 0 0' }}>{t('dashboard_subtitle')}</p>
+        <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0, color: '#111' }}>{t('dashboard_title')}</h1>
+        <p style={{ fontSize: 14, color: '#6b7280', margin: '4px 0 0' }}>{t('dashboard_subtitle')}</p>
       </div>
 
       {/* Tarjetas resumen */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12, marginBottom: 24 }}>
-        <StatCard label={t('dashboard_sales_today')}  value={`$${todaySales.toFixed(2)}`}               icon="💰" />
-        <StatCard label={t('dashboard_passes_today')} value={`$${todayPassRev.toFixed(2)}`}             icon="🏊" />
-        <StatCard label={t('dashboard_active_orders')} value={activeOrders.length}                      icon="🍽️" sub={`${todayOrders.length} ${t('dashboard_orders_today')}`} />
-        <StatCard label={t('dashboard_rooms_occ')}    value={`${occupiedRooms.length}/${rooms.length}`} icon="🏨" sub={`${checkedIn} ${t('dashboard_guests')}`} />
+        <StatCard label={t('dashboard_sales_today')}   value={`$${todaySales.toFixed(2)}`}               icon="💰" />
+        <StatCard label={t('dashboard_passes_today')}  value={`$${todayPassRev.toFixed(2)}`}             icon="🏊" />
+        <StatCard label={t('dashboard_active_orders')} value={activeOrders.length}                       icon="🍽️" sub={`${todayOrders.length} ${t('dashboard_orders_today')}`} />
+        <StatCard label={t('dashboard_rooms_occ')}     value={`${occupiedRooms.length}/${rooms.length}`} icon="🏨" sub={`${checkedIn} ${t('dashboard_guests')}`} />
       </div>
 
       {/* Gráfico 1: Restaurante */}
-      <ChartSection title={t('dashboard_restaurant')} subtitle={t('dashboard_rest_sub')}>
+      <ChartSection title={`🍽️ ${t('dashboard_restaurant')}`} subtitle={t('dashboard_rest_sub')}>
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
           <div>
-            <p style={{ margin: '0 0 10px', fontSize: 12, color: '#7ab8a8' }}>{t('dashboard_daily_income')}</p>
+            <p style={{ margin: '0 0 10px', fontSize: 12, color: '#6b7280' }}>{t('dashboard_daily_income')}</p>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={salesByDay} barSize={28}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a3330" />
-                <XAxis dataKey="dia" tick={{ fill: '#7ab8a8', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#7ab8a8', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                <XAxis dataKey="dia" tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="ingresos" name={t('restaurant_label')} fill="#1d9e75" radius={[4,4,0,0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
           <div>
-            <p style={{ margin: '0 0 10px', fontSize: 12, color: '#7ab8a8' }}>{t('dashboard_top_products')}</p>
+            <p style={{ margin: '0 0 10px', fontSize: 12, color: '#6b7280' }}>{t('dashboard_top_products')}</p>
             {categoryData.length === 0 ? (
-              <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7ab8a8', fontSize: 13 }}>{t('dashboard_no_data')}</div>
+              <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: 13 }}>{t('dashboard_no_data')}</div>
             ) : (
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
@@ -193,8 +197,8 @@ export default function Dashboard() {
                     label={({ percent }) => percent > 0.08 ? `${Math.round(percent*100)}%` : ''} labelLine={false}>
                     {categoryData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                   </Pie>
-                  <Tooltip formatter={(val, name) => [val, name]} contentStyle={{ background: '#0f1f1c', border: '1px solid #1a3330', borderRadius: 8, fontSize: 12 }} />
-                  <Legend iconSize={10} wrapperStyle={{ fontSize: 11, color: '#7ab8a8' }} />
+                  <Tooltip contentStyle={chartTooltipStyle} />
+                  <Legend iconSize={10} wrapperStyle={{ fontSize: 11, color: '#6b7280' }} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -202,28 +206,28 @@ export default function Dashboard() {
         </div>
 
         {/* Órdenes recientes */}
-        <div style={{ marginTop: 20, borderTop: '1px solid #1a3330', paddingTop: 16 }}>
-          <p style={{ margin: '0 0 12px', fontSize: 13, fontWeight: 600, color: 'white' }}>{t('dashboard_recent_orders')}</p>
+        <div style={{ marginTop: 20, borderTop: '1px solid #f3f4f6', paddingTop: 16 }}>
+          <p style={{ margin: '0 0 12px', fontSize: 13, fontWeight: 600, color: '#111' }}>{t('dashboard_recent_orders')}</p>
           {orders.length === 0 ? (
-            <p style={{ color: '#7ab8a8', fontSize: 13, textAlign: 'center', padding: '16px 0' }}>{t('dashboard_no_orders')}</p>
+            <p style={{ color: '#9ca3af', fontSize: 13, textAlign: 'center', padding: '16px 0' }}>{t('dashboard_no_orders')}</p>
           ) : (
             <div>
               {orders.slice(0, 5).map(order => (
-                <div key={order.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #1a333040' }}>
+                <div key={order.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f3f4f6' }}>
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 8, background: '#1a3330', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'white' }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 8, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#1d9e75' }}>
                       {order.table_number ? `M${order.table_number}` : order.room_number ? `H${order.room_number}` : '#'}
                     </div>
                     <div>
-                      <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'white' }}>{order.customer_name || `Mesa ${order.table_number || '-'}`}</p>
-                      <p style={{ margin: 0, fontSize: 11, color: '#7ab8a8' }}>{order.items?.length || 0} {t('orders_items')} · {order.waiter_name || t('orders_unassigned')}</p>
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: '#111' }}>{order.customer_name || `Mesa ${order.table_number || '-'}`}</p>
+                      <p style={{ margin: 0, fontSize: 11, color: '#9ca3af' }}>{order.items?.length || 0} {t('orders_items')} · {order.waiter_name || t('orders_unassigned')}</p>
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: (statusColors[order.status] || '#f59e0b') + '20', color: statusColors[order.status] || '#f59e0b' }}>
+                    <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: (statusColors[order.status] || '#f59e0b') + '20', color: statusColors[order.status] || '#f59e0b', fontWeight: 600 }}>
                       {statusLabels[order.status] || order.status}
                     </span>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>${(order.total || 0).toFixed(2)}</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: '#111' }}>${(order.total || 0).toFixed(2)}</span>
                   </div>
                 </div>
               ))}
@@ -234,26 +238,26 @@ export default function Dashboard() {
 
       {/* Gráfico 2: Hospedaje */}
       <div style={{ marginTop: 20 }}>
-        <ChartSection title={t('dashboard_hospedaje')} subtitle={t('dashboard_hosp_sub')}>
+        <ChartSection title={`🏨 ${t('dashboard_hospedaje')}`} subtitle={t('dashboard_hosp_sub')}>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
             <div>
-              <p style={{ margin: '0 0 10px', fontSize: 12, color: '#7ab8a8' }}>{t('dashboard_income_type')}</p>
+              <p style={{ margin: '0 0 10px', fontSize: 12, color: '#6b7280' }}>{t('dashboard_income_type')}</p>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={hospedajeByDay} barSize={24}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1a3330" />
-                  <XAxis dataKey="dia" tick={{ fill: '#7ab8a8', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: '#7ab8a8', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                  <XAxis dataKey="dia" tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Legend iconSize={10} wrapperStyle={{ fontSize: 11, color: '#7ab8a8' }} />
+                  <Legend iconSize={10} wrapperStyle={{ fontSize: 11, color: '#6b7280' }} />
                   <Bar dataKey="reservas" name={t('reservations_label')} fill="#3b82f6" radius={[0,0,0,0]} stackId="a" />
                   <Bar dataKey="pasadias" name={t('passes_label')}       fill="#1d9e75" radius={[4,4,0,0]} stackId="a" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
             <div>
-              <p style={{ margin: '0 0 10px', fontSize: 12, color: '#7ab8a8' }}>{t('dashboard_room_status')}</p>
+              <p style={{ margin: '0 0 10px', fontSize: 12, color: '#6b7280' }}>{t('dashboard_room_status')}</p>
               {roomStatusData.length === 0 ? (
-                <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7ab8a8', fontSize: 13 }}>{t('dashboard_no_rooms')}</div>
+                <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: 13 }}>{t('dashboard_no_rooms')}</div>
               ) : (
                 <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
@@ -261,8 +265,8 @@ export default function Dashboard() {
                       label={({ value }) => value > 0 ? value : ''} labelLine={false}>
                       {roomStatusData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                     </Pie>
-                    <Tooltip contentStyle={{ background: '#0f1f1c', border: '1px solid #1a3330', borderRadius: 8, fontSize: 12 }} />
-                    <Legend iconSize={10} wrapperStyle={{ fontSize: 11, color: '#7ab8a8' }} />
+                    <Tooltip contentStyle={chartTooltipStyle} />
+                    <Legend iconSize={10} wrapperStyle={{ fontSize: 11, color: '#6b7280' }} />
                   </PieChart>
                 </ResponsiveContainer>
               )}
@@ -274,37 +278,38 @@ export default function Dashboard() {
       {/* Gráfico 3: Consolidado */}
       <div style={{ marginTop: 20 }}>
         <ChartSection
-          title={t('dashboard_consolidated')}
+          title={`📊 ${t('dashboard_consolidated')}`}
           subtitle={`${t('dashboard_total_7')}: $${totalConsolidado.toFixed(2)} — ${t('dashboard_restaurant')} + ${t('dashboard_hospedaje')}`}
         >
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={consolidadoByDay}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1a3330" />
-              <XAxis dataKey="dia" tick={{ fill: '#7ab8a8', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#7ab8a8', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+              <XAxis dataKey="dia" tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} />
-              <Legend iconSize={10} wrapperStyle={{ fontSize: 11, color: '#7ab8a8' }} />
+              <Legend iconSize={10} wrapperStyle={{ fontSize: 11, color: '#6b7280' }} />
               <Line type="monotone" dataKey="restaurant" name={t('restaurant_label')} stroke="#1d9e75" strokeWidth={2} dot={{ fill: '#1d9e75', r: 4 }} />
               <Line type="monotone" dataKey="hospedaje"  name={t('hospedaje_label')}  stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6', r: 4 }} />
               <Line type="monotone" dataKey="total"      name={t('total_label')}       stroke="#f59e0b" strokeWidth={3} dot={{ fill: '#f59e0b', r: 5 }} strokeDasharray="5 2" />
             </LineChart>
           </ResponsiveContainer>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 20, borderTop: '1px solid #1a3330', paddingTop: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 20, borderTop: '1px solid #f3f4f6', paddingTop: 16 }}>
             {[
-              { label: t('dashboard_restaurant_7'), value: consolidadoByDay.reduce((s, d) => s + d.restaurant, 0), color: '#1d9e75', icon: '🍽️' },
-              { label: t('dashboard_hospedaje_7'),  value: consolidadoByDay.reduce((s, d) => s + d.hospedaje, 0),  color: '#3b82f6', icon: '🏨' },
-              { label: t('dashboard_total_7'),      value: totalConsolidado,                                        color: '#f59e0b', icon: '📊' },
+              { label: t('dashboard_restaurant_7'), value: consolidadoByDay.reduce((s, d) => s + d.restaurant, 0), color: '#1d9e75', icon: '🍽️', bg: '#f0fdf4' },
+              { label: t('dashboard_hospedaje_7'),  value: consolidadoByDay.reduce((s, d) => s + d.hospedaje, 0),  color: '#3b82f6', icon: '🏨', bg: '#eff6ff' },
+              { label: t('dashboard_total_7'),      value: totalConsolidado,                                        color: '#f59e0b', icon: '📊', bg: '#fffbeb' },
             ].map((item, i) => (
-              <div key={i} style={{ background: '#1a3330', borderRadius: 10, padding: '12px 16px', textAlign: 'center' }}>
+              <div key={i} style={{ background: item.bg, border: `1px solid ${item.color}20`, borderRadius: 10, padding: '12px 16px', textAlign: 'center' }}>
                 <p style={{ margin: 0, fontSize: 20 }}>{item.icon}</p>
                 <p style={{ margin: '6px 0 2px', fontSize: 18, fontWeight: 800, color: item.color }}>${item.value.toFixed(2)}</p>
-                <p style={{ margin: 0, fontSize: 11, color: '#7ab8a8' }}>{item.label}</p>
+                <p style={{ margin: 0, fontSize: 11, color: '#6b7280' }}>{item.label}</p>
               </div>
             ))}
           </div>
         </ChartSection>
       </div>
+
     </div>
   )
 }
