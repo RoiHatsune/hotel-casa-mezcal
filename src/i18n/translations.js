@@ -132,6 +132,7 @@ export const translations = {
     cat_coffee:       'Café',
     cat_side:         'Acompañamientos',
     cat_special:      'Especiales',
+    cat_bbq: 'BBQ / Asados',
 
     // ── Facturación ───────────────────────────────────────────────────────────
     billing_title:      'Transacciones',
@@ -564,6 +565,7 @@ export const translations = {
     cat_coffee:       'Coffee',
     cat_side:         'Sides',
     cat_special:      'Specials',
+    cat_bbq: 'BBQ / Grills',
 
     // ── Billing ───────────────────────────────────────────────────────────────
     billing_title:       'Transactions',

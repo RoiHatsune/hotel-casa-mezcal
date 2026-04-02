@@ -16,6 +16,7 @@ const categoryColors = {
   coffee:      { bg: '#fdf2e9', text: '#7b341e' },
   side:        { bg: '#f0fdf4', text: '#14532d' },
   special:     { bg: '#e0f2fe', text: '#0c4a6e' },
+  bbq: { bg: '#fef3c7', text: '#92400e' },
 }
 
 function ProductModal({ open, onClose, product }) {
@@ -41,6 +42,7 @@ function ProductModal({ open, onClose, product }) {
     { value: 'coffee',      label: t('cat_coffee') },
     { value: 'side',        label: t('cat_side') },
     { value: 'special',     label: t('cat_special') },
+    { value: 'bbq', label: t('cat_bbq') },
   ]
 
   const saveMutation = useMutation({
@@ -63,8 +65,8 @@ function ProductModal({ open, onClose, product }) {
   if (!open) return null
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: 'white', borderRadius: 16, width: '100%', maxWidth: 480, padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,.2)' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(157, 235, 177, 0.74)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ background: 'white', borderRadius: 16, width: '100%', maxWidth: 480, padding: 28, boxShadow: '0 20px 60px rgba(221, 198, 198, 0.2)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#111' }}>
             {isEdit ? t('menu_edit_title') : t('menu_new_title')}
