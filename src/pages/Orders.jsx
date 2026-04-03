@@ -14,6 +14,133 @@ const nextStatus = {
   served:    'paid',
 }
 
+// ─── Opciones de acompañamientos y variantes ──────────────────────────────────
+// Categorías que ofrecen selección de acompañamiento
+const CATS_WITH_SIDES = ['main_course', 'special', 'bbq']
+
+// Opciones de acompañamiento disponibles
+const SIDES = ['Papas', 'Patacones', 'Arroz y ensalada', 'Arroz', 'Sin acompañamiento']
+
+// Productos que además tienen una variante de proteína / tipo
+// Clave: nombre del producto en MINÚSCULAS (se compara con toLowerCase)
+const PROTEIN_VARIANTS = {
+  'pescado o filete':    ['Pescado', 'Filete'],
+  'comidas del día':     ['Res', 'Pollo', 'Cerdo', 'Pescado', 'Especial del día'],
+  'picada de tacos':     ['Res', 'Pollo', 'Mixta'],
+  'tacos (6)':           ['Res', 'Pollo', 'Mixto'],
+  'alitas bbq o buffalo':['BBQ', 'Buffalo'],
+}
+
+// Determina si un producto necesita el selector de opciones
+function productNeedsOptions(product) {
+  const hasProtein = !!PROTEIN_VARIANTS[product.name?.toLowerCase()]
+  const hasSide    = CATS_WITH_SIDES.includes(product.category)
+  return hasProtein || hasSide
+}
+
+// ─── Modal de opciones del producto ──────────────────────────────────────────
+function ProductOptionsModal({ open, product, onConfirm, onCancel }) {
+  const proteinOptions = product ? PROTEIN_VARIANTS[product.name?.toLowerCase()] : null
+  const hasSide        = product ? CATS_WITH_SIDES.includes(product.category) : false
+
+  const [protein, setProtein] = useState('')
+  const [side, setSide]       = useState('')
+
+  useEffect(() => {
+    if (open) { setProtein(''); setSide('') }
+  }, [open, product])
+
+  if (!open || !product) return null
+
+  const canConfirm = (!proteinOptions || protein) && (!hasSide || side)
+
+  // Construir nota automática
+  const handleConfirm = () => {
+    const parts = []
+    if (protein) parts.push(protein)
+    if (side)    parts.push(side)
+    onConfirm(parts.join(' · '))
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ background: 'white', borderRadius: 16, width: '100%', maxWidth: 400, padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,.2)' }}>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#111' }}>{product.name}</h3>
+            <p style={{ margin: '2px 0 0', fontSize: 13, color: '#1d9e75', fontWeight: 600 }}>${product.price?.toFixed(2)}</p>
+          </div>
+          <button onClick={onCancel} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#9ca3af' }}>✕</button>
+        </div>
+
+        {/* Variante de proteína / tipo */}
+        {proteinOptions && (
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 8 }}>
+              🍽️ Seleccionar tipo *
+            </label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {proteinOptions.map(opt => (
+                <button key={opt} onClick={() => setProtein(opt)} style={{
+                  padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 500,
+                  border: `2px solid ${protein === opt ? '#1d9e75' : '#e5e7eb'}`,
+                  background: protein === opt ? '#f0fdf4' : 'white',
+                  color: protein === opt ? '#166534' : '#374151',
+                }}>
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Acompañamiento */}
+        {hasSide && (
+          <div style={{ marginBottom: 24 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 8 }}>
+              🍟 Acompañamiento *
+            </label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {SIDES.map(s => (
+                <button key={s} onClick={() => setSide(s)} style={{
+                  padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 500,
+                  border: `2px solid ${side === s ? '#1d9e75' : '#e5e7eb'}`,
+                  background: side === s ? '#f0fdf4' : 'white',
+                  color: side === s ? '#166534' : '#374151',
+                }}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Preview de la nota */}
+        {(protein || side) && (
+          <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px', marginBottom: 16, fontSize: 13, color: '#166534' }}>
+            📝 {[protein, side].filter(Boolean).join(' · ')}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button onClick={onCancel} style={{ padding: '9px 18px', borderRadius: 8, border: '1px solid #e5e7eb', background: 'white', color: '#374151', fontSize: 14, cursor: 'pointer' }}>
+            Cancelar
+          </button>
+          <button onClick={handleConfirm} disabled={!canConfirm} style={{
+            padding: '9px 18px', borderRadius: 8, border: 'none', fontSize: 14, fontWeight: 600, cursor: canConfirm ? 'pointer' : 'not-allowed',
+            background: canConfirm ? '#1d9e75' : '#e5e7eb',
+            color: canConfirm ? 'white' : '#9ca3af',
+          }}>
+            ✓ Agregar al pedido
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Inventory discount ───────────────────────────────────────────────────────
 async function descontarInventario(items, orderId) {
   for (const item of items) {
     const { data: recipeItems } = await supabase
@@ -41,7 +168,8 @@ async function descontarInventario(items, orderId) {
 // ─── Items Editor ─────────────────────────────────────────────────────────────
 function ItemsEditor({ items, setItems, products, discounts, tipPercent = 0 }) {
   const { t } = useTranslation()
-  const [search, setSearch] = useState('')
+  const [search, setSearch]             = useState('')
+  const [optionsProduct, setOptProduct] = useState(null)
 
   const categoryLabels = {
     appetizer:   t('cat_appetizer'),
@@ -70,27 +198,39 @@ function ItemsEditor({ items, setItems, products, discounts, tipPercent = 0 }) {
     return acc
   }, {})
 
-  const addItem = (product) => {
-    const existing = items.find(i => i.product_id === product.id)
-    if (existing) {
-      setItems(items.map(i =>
-        i.product_id === product.id
-          ? { ...i, quantity: i.quantity + 1, line_total: (i.quantity + 1) * i.unit_price * (1 - (i.discount_percentage || 0) / 100) }
-          : i
-      ))
+  // Crear nueva línea independiente para cada producto seleccionado
+  const addItemWithNote = (product, autoNote = '') => {
+    setItems(prev => [...prev, {
+      product_id:          product.id,
+      product_name:        product.name,
+      line_id:             `${product.id}_${Date.now()}`,
+      quantity:            1,
+      unit_price:          product.price,
+      notes:               autoNote,
+      discount_id:         null,
+      discount_name:       null,
+      discount_percentage: 0,
+      discount_amount:     0,
+      line_total:          product.price,
+    }])
+  }
+
+  const handleProductClick = (product) => {
+    if (productNeedsOptions(product)) {
+      setOptProduct(product)
     } else {
-      setItems([...items, {
-        product_id: product.id, product_name: product.name,
-        quantity: 1, unit_price: product.price, notes: '',
-        discount_id: null, discount_name: null,
-        discount_percentage: 0, discount_amount: 0, line_total: product.price,
-      }])
+      addItemWithNote(product)
     }
   }
 
-  const changeQty = (productId, delta) => {
+  const handleOptionsConfirm = (autoNote) => {
+    addItemWithNote(optionsProduct, autoNote)
+    setOptProduct(null)
+  }
+
+  const changeQty = (lineId, delta) => {
     setItems(items.map(i => {
-      if (i.product_id !== productId) return i
+      if (i.line_id !== lineId) return i
       const newQty = Math.max(1, i.quantity + delta)
       const base   = newQty * i.unit_price
       const disc   = base * (i.discount_percentage || 0) / 100
@@ -98,24 +238,27 @@ function ItemsEditor({ items, setItems, products, discounts, tipPercent = 0 }) {
     }))
   }
 
-  const removeItem = (productId) => setItems(items.filter(i => i.product_id !== productId))
+  const removeItem = (lineId) => setItems(items.filter(i => i.line_id !== lineId))
 
-  const applyDiscount = (productId, discountId) => {
+  const applyDiscount = (lineId, discountId) => {
     const discount = discounts.find(d => d.id === discountId)
     setItems(items.map(i => {
-      if (i.product_id !== productId) return i
+      if (i.line_id !== lineId) return i
       const base = i.quantity * i.unit_price
       const disc = discount ? base * (discount.percentage / 100) : 0
       return {
         ...i,
-        discount_id: discount?.id || null, discount_name: discount?.name || null,
-        discount_percentage: discount?.percentage || 0, discount_amount: disc, line_total: base - disc,
+        discount_id:         discount?.id || null,
+        discount_name:       discount?.name || null,
+        discount_percentage: discount?.percentage || 0,
+        discount_amount:     disc,
+        line_total:          base - disc,
       }
     }))
   }
 
-  const setItemNotes = (productId, notes) =>
-    setItems(items.map(i => i.product_id === productId ? { ...i, notes } : i))
+  const setItemNotes = (lineId, notes) =>
+    setItems(items.map(i => i.line_id === lineId ? { ...i, notes } : i))
 
   const subtotal      = items.reduce((s, i) => s + i.quantity * i.unit_price, 0)
   const totalDiscount = items.reduce((s, i) => s + (i.discount_amount || 0), 0)
@@ -125,119 +268,147 @@ function ItemsEditor({ items, setItems, products, discounts, tipPercent = 0 }) {
   const total         = afterDiscount + tax + tip
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-      {/* Left — product picker */}
-      <div>
-        <input
-          placeholder={t('orders_search_prod')}
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #1a3330', background: '#0a1512', color: 'white', fontSize: 13, marginBottom: 12, boxSizing: 'border-box' }}
-        />
-        <div style={{ maxHeight: 380, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {Object.entries(grouped).map(([cat, prods]) => (
-            <div key={cat}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: '#7ab8a8', textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 6px' }}>
-                {categoryLabels[cat] || cat}
-              </p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                {prods.map(p => (
-                  <button key={p.id} onClick={() => addItem(p)} style={{
-                    textAlign: 'left', padding: '10px 12px', borderRadius: 8,
-                    border: '1px solid #1a3330', background: '#0a1512', cursor: 'pointer',
-                  }}
-                    onMouseEnter={e => e.currentTarget.style.borderColor = '#1d9e75'}
-                    onMouseLeave={e => e.currentTarget.style.borderColor = '#1a3330'}
-                  >
-                    <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</p>
-                    <p style={{ margin: '3px 0 0', fontSize: 12, color: '#1d9e75', fontWeight: 600 }}>${p.price?.toFixed(2)}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-          {available.length === 0 && <p style={{ color: '#7ab8a8', fontSize: 13, textAlign: 'center', padding: '40px 0' }}>{t('orders_no_results')}</p>}
-        </div>
-      </div>
+    <>
+      <ProductOptionsModal
+        open={!!optionsProduct}
+        product={optionsProduct}
+        onConfirm={handleOptionsConfirm}
+        onCancel={() => setOptProduct(null)}
+      />
 
-      {/* Right — items in order */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 600, color: 'white' }}>
-          {t('orders_in_order')} ({items.length})
-        </p>
-        {items.length === 0 ? (
-          <div style={{ border: '1px dashed #1a3330', borderRadius: 10, textAlign: 'center', padding: '40px 0', color: '#7ab8a8', fontSize: 13 }}>
-            {t('orders_add_product')}
-          </div>
-        ) : (
-          <div style={{ maxHeight: 320, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {items.map(item => (
-              <div key={item.product_id} style={{ background: '#0a1512', border: '1px solid #1a3330', borderRadius: 10, padding: '10px 12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'white', flex: 1, paddingRight: 8 }}>{item.product_name}</p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <button onClick={() => changeQty(item.product_id, -1)} style={btnSmall}>−</button>
-                    <span style={{ fontSize: 13, fontWeight: 700, minWidth: 20, textAlign: 'center', color: 'white' }}>{item.quantity}</span>
-                    <button onClick={() => changeQty(item.product_id, 1)} style={btnSmall}>+</button>
-                    <button onClick={() => removeItem(item.product_id)} style={{ ...btnSmall, color: '#ef4444', borderColor: '#ef444430' }}>✕</button>
-                  </div>
-                </div>
-                <p style={{ margin: '2px 0 6px', fontSize: 12, color: '#7ab8a8' }}>${item.unit_price?.toFixed(2)} c/u</p>
-                {discounts.length > 0 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    <select
-                      value={item.discount_id || ''}
-                      onChange={e => applyDiscount(item.product_id, e.target.value)}
-                      style={{ fontSize: 12, padding: '3px 8px', borderRadius: 6, border: '1px solid #1a3330', background: '#0f1f1c', color: '#7ab8a8', cursor: 'pointer' }}
-                    >
-                      <option value="">{t('orders_no_discount')}</option>
-                      {discounts.map(d => (
-                        <option key={d.id} value={d.id}>{d.name} -{d.percentage}%</option>
-                      ))}
-                    </select>
-                    {item.discount_amount > 0 && (
-                      <span style={{ fontSize: 11, color: '#1d9e75' }}>-${item.discount_amount.toFixed(2)}</span>
-                    )}
-                  </div>
-                )}
-                <input
-                  placeholder={t('orders_notes_item')}
-                  value={item.notes || ''}
-                  onChange={e => setItemNotes(item.product_id, e.target.value)}
-                  style={{ width: '100%', fontSize: 12, padding: '4px 8px', borderRadius: 6, border: '1px solid #1a3330', background: '#0f1f1c', color: '#ccc', boxSizing: 'border-box' }}
-                />
-                <p style={{ margin: '6px 0 0', fontSize: 13, fontWeight: 700, color: 'white', textAlign: 'right' }}>
-                  ${(item.line_total ?? item.quantity * item.unit_price).toFixed(2)}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        {/* Left — product picker */}
+        <div>
+          <input
+            placeholder={t('orders_search_prod')}
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #1a3330', background: '#0a1512', color: 'white', fontSize: 13, marginBottom: 12, boxSizing: 'border-box' }}
+          />
+          <div style={{ maxHeight: 380, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {Object.entries(grouped).map(([cat, prods]) => (
+              <div key={cat}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: '#7ab8a8', textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 6px' }}>
+                  {categoryLabels[cat] || cat}
                 </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                  {prods.map(p => {
+                    const hasOpts = productNeedsOptions(p)
+                    return (
+                      <button key={p.id} onClick={() => handleProductClick(p)} style={{
+                        textAlign: 'left', padding: '10px 12px', borderRadius: 8,
+                        border: `1px solid ${hasOpts ? '#1d9e7540' : '#1a3330'}`,
+                        background: hasOpts ? '#0d1f1a' : '#0a1512',
+                        cursor: 'pointer', position: 'relative',
+                      }}
+                        onMouseEnter={e => e.currentTarget.style.borderColor = '#1d9e75'}
+                        onMouseLeave={e => e.currentTarget.style.borderColor = hasOpts ? '#1d9e7540' : '#1a3330'}
+                      >
+                        {hasOpts && (
+                          <span style={{ position: 'absolute', top: 6, right: 6, fontSize: 10, color: '#1d9e75' }}>⚙️</span>
+                        )}
+                        <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: hasOpts ? 16 : 0 }}>{p.name}</p>
+                        <p style={{ margin: '3px 0 0', fontSize: 12, color: '#1d9e75', fontWeight: 600 }}>${p.price?.toFixed(2)}</p>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             ))}
+            {available.length === 0 && <p style={{ color: '#7ab8a8', fontSize: 13, textAlign: 'center', padding: '40px 0' }}>{t('orders_no_results')}</p>}
           </div>
-        )}
-        {items.length > 0 && (
-          <div style={{ borderTop: '1px solid #1a3330', paddingTop: 10, marginTop: 4 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#7ab8a8', marginBottom: 4 }}>
-              <span>{t('orders_subtotal')}</span><span>${subtotal.toFixed(2)}</span>
+          <p style={{ margin: '8px 0 0', fontSize: 11, color: '#7ab8a880' }}>⚙️ = seleccionar tipo / acompañamiento</p>
+        </div>
+
+        {/* Right — items in order */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 600, color: 'white' }}>
+            {t('orders_in_order')} ({items.length})
+          </p>
+          {items.length === 0 ? (
+            <div style={{ border: '1px dashed #1a3330', borderRadius: 10, textAlign: 'center', padding: '40px 0', color: '#7ab8a8', fontSize: 13 }}>
+              {t('orders_add_product')}
             </div>
-            {totalDiscount > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#1d9e75', marginBottom: 4 }}>
-                <span>{t('orders_discounts')}</span><span>-${totalDiscount.toFixed(2)}</span>
-              </div>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#7ab8a8', marginBottom: 4 }}>
-              <span>{t('orders_itbms')}</span><span>${tax.toFixed(2)}</span>
+          ) : (
+            <div style={{ maxHeight: 360, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {items.map((item, idx) => (
+                <div key={item.line_id || idx} style={{ background: '#0a1512', border: '1px solid #1a3330', borderRadius: 10, padding: '10px 12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'white', flex: 1, paddingRight: 8 }}>{item.product_name}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <button onClick={() => changeQty(item.line_id, -1)} style={btnSmall}>−</button>
+                      <span style={{ fontSize: 13, fontWeight: 700, minWidth: 20, textAlign: 'center', color: 'white' }}>{item.quantity}</span>
+                      <button onClick={() => changeQty(item.line_id, 1)} style={btnSmall}>+</button>
+                      <button onClick={() => removeItem(item.line_id)} style={{ ...btnSmall, color: '#ef4444', borderColor: '#ef444430' }}>✕</button>
+                    </div>
+                  </div>
+                  <p style={{ margin: '2px 0 6px', fontSize: 12, color: '#7ab8a8' }}>${item.unit_price?.toFixed(2)} c/u</p>
+
+                  {/* Nota automática (tipo/acompañamiento) — resaltada */}
+                  {item.notes && (
+                    <div style={{ background: '#1a3330', borderRadius: 6, padding: '4px 8px', marginBottom: 6, fontSize: 12, color: '#1d9e75', fontWeight: 500 }}>
+                      📝 {item.notes}
+                    </div>
+                  )}
+
+                  {discounts.length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <select
+                        value={item.discount_id || ''}
+                        onChange={e => applyDiscount(item.line_id, e.target.value)}
+                        style={{ fontSize: 12, padding: '3px 8px', borderRadius: 6, border: '1px solid #1a3330', background: '#0f1f1c', color: '#7ab8a8', cursor: 'pointer' }}
+                      >
+                        <option value="">{t('orders_no_discount')}</option>
+                        {discounts.map(d => (
+                          <option key={d.id} value={d.id}>{d.name} -{d.percentage}%</option>
+                        ))}
+                      </select>
+                      {item.discount_amount > 0 && (
+                        <span style={{ fontSize: 11, color: '#1d9e75' }}>-${item.discount_amount.toFixed(2)}</span>
+                      )}
+                    </div>
+                  )}
+
+                  <input
+                    placeholder="Nota adicional..."
+                    value={item.notes || ''}
+                    onChange={e => setItemNotes(item.line_id, e.target.value)}
+                    style={{ width: '100%', fontSize: 12, padding: '4px 8px', borderRadius: 6, border: '1px solid #1a3330', background: '#0f1f1c', color: '#ccc', boxSizing: 'border-box' }}
+                  />
+                  <p style={{ margin: '6px 0 0', fontSize: 13, fontWeight: 700, color: 'white', textAlign: 'right' }}>
+                    ${(item.line_total ?? item.quantity * item.unit_price).toFixed(2)}
+                  </p>
+                </div>
+              ))}
             </div>
-            {tipPercent > 0 && (
+          )}
+
+          {items.length > 0 && (
+            <div style={{ borderTop: '1px solid #1a3330', paddingTop: 10, marginTop: 4 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#7ab8a8', marginBottom: 4 }}>
-                <span>{t('orders_tip_label')} ({tipPercent}%)</span><span>${tip.toFixed(2)}</span>
+                <span>{t('orders_subtotal')}</span><span>${subtotal.toFixed(2)}</span>
               </div>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 700, color: 'white', borderTop: '1px solid #1a333060', paddingTop: 8, marginTop: 4 }}>
-              <span>{t('orders_total')}</span><span>${total.toFixed(2)}</span>
+              {totalDiscount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#1d9e75', marginBottom: 4 }}>
+                  <span>{t('orders_discounts')}</span><span>-${totalDiscount.toFixed(2)}</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#7ab8a8', marginBottom: 4 }}>
+                <span>{t('orders_itbms')}</span><span>${tax.toFixed(2)}</span>
+              </div>
+              {tipPercent > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#7ab8a8', marginBottom: 4 }}>
+                  <span>{t('orders_tip_label')} ({tipPercent}%)</span><span>${tip.toFixed(2)}</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 700, color: 'white', borderTop: '1px solid #1a333060', paddingTop: 8, marginTop: 4 }}>
+                <span>{t('orders_total')}</span><span>${total.toFixed(2)}</span>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -247,8 +418,8 @@ const btnSmall = {
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 }
 
-// ─── OrderModal ───────────────────────────────────────────────────────────────
-function OrderModal({ open, onClose, order, products, discounts, rooms, currentUser }) {
+// ─── Order Modal ──────────────────────────────────────────────────────────────
+function OrderModal({ open, onClose, order, products, discounts, rooms }) {
   const queryClient = useQueryClient()
   const { t } = useTranslation()
   const isEdit = !!order
@@ -260,7 +431,7 @@ function OrderModal({ open, onClose, order, products, discounts, rooms, currentU
   const [items, setItems]               = useState([])
   const [tipPercent, setTipPercent]     = useState(0)
 
-  // ── Reset state when order changes (fix: editar no borra anterior) ──────────
+  // Fix: cargar ítems existentes al abrir modal de edición
   useEffect(() => {
     if (open) {
       setTableNumber(order?.table_number?.toString() || '')
@@ -268,8 +439,12 @@ function OrderModal({ open, onClose, order, products, discounts, rooms, currentU
       setRoomId(order?.room_id || '')
       setNotes(order?.notes || '')
       setTipPercent(0)
-      // Cargar los ítems existentes de la orden al editar
-      setItems(order?.items ? JSON.parse(JSON.stringify(order.items)) : [])
+      // Asignar line_id a ítems existentes si no lo tienen
+      const loadedItems = (order?.items || []).map((it, idx) => ({
+        ...it,
+        line_id: it.line_id || `${it.product_id}_existing_${idx}`,
+      }))
+      setItems(loadedItems)
     }
   }, [open, order])
 
@@ -278,10 +453,8 @@ function OrderModal({ open, onClose, order, products, discounts, rooms, currentU
   const saveMutation = useMutation({
     mutationFn: async (data) => {
       if (isEdit) {
-        // Al editar: solo actualiza, no descuenta inventario de nuevo
         return await Orders.update(order.id, data)
       } else {
-        // Al crear: descuenta inventario
         const result = await Orders.create(data)
         if (result.data?.id) await descontarInventario(data.items, result.data.id)
         return result
@@ -311,7 +484,6 @@ function OrderModal({ open, onClose, order, products, discounts, rooms, currentU
       room_id:         roomId || null,
       room_number:     selectedRoom?.room_number || null,
       items, subtotal, discount_amount: totalDiscount, tax, tip, total, notes,
-      waiter_name:     currentUser?.full_name || currentUser?.email || '',
       status:          order?.status || 'pending',
     })
   }
@@ -320,17 +492,17 @@ function OrderModal({ open, onClose, order, products, discounts, rooms, currentU
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: '#000a', zIndex: 50, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '24px 16px', overflowY: 'auto' }}>
-      <div style={{ background: '#0f1f1c', borderRadius: 16, border: '1px solid #1a3330', width: '100%', maxWidth: 900, padding: 28 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: 'white' }}>
+      <div style={{ background: '#0f1f1c', borderRadius: 16, border: '1px solid #1a3330', width: '100%', maxWidth: 920, padding: 28 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'white' }}>
             {isEdit ? t('orders_modal_edit') : t('orders_modal_new')}
           </h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#7ab8a8', fontSize: 20, cursor: 'pointer' }}>✕</button>
         </div>
 
         {isEdit && (
-          <div style={{ background: '#1a3330', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#7ab8a8' }}>
-            ✏️ {t('orders_edit_hint') || 'Editing order — existing items are preserved. Add new products or adjust quantities.'}
+          <div style={{ background: '#1a3330', borderRadius: 8, padding: '8px 14px', marginBottom: 16, fontSize: 13, color: '#7ab8a8' }}>
+            ✏️ Editando orden — los productos existentes se mantienen. Agrega nuevos o ajusta cantidades.
           </div>
         )}
 
@@ -460,12 +632,15 @@ export default function OrdersPage() {
             background: filter === s ? '#1d9e75' : '#f3f4f6',
             color: filter === s ? 'white' : '#374151',
           }}>
-            {s === 'all' ? `${t('orders_all')} (${orders.length})` : `${statusConfig[s]?.label} (${orders.filter(o => o.status === s).length})`}
+            {s === 'all'
+              ? `${t('orders_all')} (${orders.length})`
+              : `${statusConfig[s]?.label} (${orders.filter(o => o.status === s).length})`
+            }
           </button>
         ))}
       </div>
 
-      {/* Orders list */}
+      {/* Orders */}
       {isLoading ? (
         <p style={{ color: '#6b7280' }}>{t('loading')}</p>
       ) : filtered.length === 0 ? (
@@ -476,7 +651,6 @@ export default function OrdersPage() {
             const status        = statusConfig[order.status] || statusConfig.pending
             const totalDiscount = order.items?.reduce((s, i) => s + (i.discount_amount || 0), 0) || order.discount_amount || 0
             const hasNotes      = order.notes && order.notes.trim() !== ''
-            const itemsWithNotes = order.items?.filter(i => i.notes && i.notes.trim() !== '') || []
 
             return (
               <div key={order.id} style={{
@@ -484,7 +658,7 @@ export default function OrdersPage() {
                 border: `1px solid ${order.status === 'pending' ? '#fde68a' : order.status === 'preparing' ? '#bfdbfe' : '#e5e7eb'}`,
                 boxShadow: '0 1px 4px rgba(0,0,0,.05)',
               }}>
-                {/* Order header */}
+                {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
                   <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
                     <div style={{ width: 44, height: 44, borderRadius: 10, background: status.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: status.color, flexShrink: 0 }}>
@@ -506,11 +680,11 @@ export default function OrdersPage() {
                   </div>
                 </div>
 
-                {/* Items detail */}
+                {/* Items */}
                 {order.items?.length > 0 && (
                   <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #f3f4f6' }}>
                     {order.items.map((item, i) => (
-                      <div key={i}>
+                      <div key={i} style={{ marginBottom: 4 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#374151', padding: '2px 0' }}>
                           <span>
                             <strong>{item.quantity}×</strong> {item.product_name}
@@ -518,9 +692,9 @@ export default function OrdersPage() {
                           </span>
                           <span style={{ color: '#111', fontWeight: 600 }}>${(item.line_total ?? item.quantity * item.unit_price).toFixed(2)}</span>
                         </div>
-                        {/* Notas del ítem — visibles para cocina */}
+                        {/* Notas del ítem — visibles para cocina en color ámbar */}
                         {item.notes && item.notes.trim() !== '' && (
-                          <p style={{ margin: '1px 0 4px 16px', fontSize: 12, color: '#f59e0b', fontStyle: 'italic' }}>
+                          <p style={{ margin: '1px 0 3px 16px', fontSize: 12, color: '#d97706', fontWeight: 500 }}>
                             📝 {item.notes}
                           </p>
                         )}
@@ -544,15 +718,15 @@ export default function OrdersPage() {
                   </div>
                 )}
 
-                {/* Notas generales de la orden — destacadas para cocina */}
+                {/* Notas generales — banner para cocina */}
                 {hasNotes && (
                   <div style={{ marginTop: 10, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: 14 }}>📋</span>
-                    <p style={{ margin: 0, fontSize: 13, color: '#92400e', fontWeight: 500 }}>{order.notes}</p>
+                    <span>📋</span>
+                    <p style={{ margin: 0, fontSize: 13, color: '#92400e', fontWeight: 600 }}>{order.notes}</p>
                   </div>
                 )}
 
-                {/* Action buttons */}
+                {/* Actions */}
                 <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
                   {order.status === 'pending' && (
                     <button onClick={() => openEdit(order)} style={{ ...actionBtn, background: '#f3f4f6', color: '#374151' }}>
@@ -560,17 +734,20 @@ export default function OrdersPage() {
                     </button>
                   )}
                   {nextStatus[order.status] && (
-                    <button onClick={() => updateMutation.mutate({ id: order.id, data: { status: nextStatus[order.status] } })} style={{ ...actionBtn, background: '#1d9e75', color: 'white' }}>
+                    <button onClick={() => updateMutation.mutate({ id: order.id, data: { status: nextStatus[order.status] } })}
+                      style={{ ...actionBtn, background: '#1d9e75', color: 'white' }}>
                       → {statusConfig[nextStatus[order.status]]?.label}
                     </button>
                   )}
                   {order.status !== 'cancelled' && order.status !== 'paid' && (
-                    <button onClick={() => updateMutation.mutate({ id: order.id, data: { status: 'cancelled' } })} style={{ ...actionBtn, background: '#fff5f5', color: '#ef4444', border: '1px solid #fee2e2' }}>
+                    <button onClick={() => updateMutation.mutate({ id: order.id, data: { status: 'cancelled' } })}
+                      style={{ ...actionBtn, background: '#fff5f5', color: '#ef4444', border: '1px solid #fee2e2' }}>
                       {t('orders_cancel')}
                     </button>
                   )}
                   {(order.status === 'paid' || order.status === 'cancelled') && (
-                    <button onClick={() => { if (confirm(t('orders_confirm_del'))) deleteMutation.mutate(order.id) }} style={{ ...actionBtn, background: '#fff5f5', color: '#ef4444', border: '1px solid #fee2e2' }}>
+                    <button onClick={() => { if (confirm(t('orders_confirm_del'))) deleteMutation.mutate(order.id) }}
+                      style={{ ...actionBtn, background: '#fff5f5', color: '#ef4444', border: '1px solid #fee2e2' }}>
                       {t('orders_delete')}
                     </button>
                   )}
@@ -588,7 +765,6 @@ export default function OrdersPage() {
         products={products}
         discounts={discounts}
         rooms={rooms}
-        currentUser={null}
       />
     </div>
   )
