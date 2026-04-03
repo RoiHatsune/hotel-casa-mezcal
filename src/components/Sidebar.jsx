@@ -19,9 +19,9 @@ export default function Sidebar({ collapsed, onToggle }) {
   // Nav items usando traducciones
   const navItems = [
     { path: '/',             label: t('nav_dashboard'),    icon: '▦' },
+    { path: '/billing',      label: t('nav_billing'),      icon: '🧾' },
     { path: '/orders',       label: t('nav_orders'),       icon: '📋' },
     { path: '/menu',         label: t('nav_menu'),         icon: '🍴' },
-    { path: '/billing',      label: t('nav_billing'),      icon: '🧾' },
     { path: '/rooms',        label: t('nav_rooms'),        icon: '🏨' },
     { path: '/reservations', label: t('nav_reservations'), icon: '📅' },
     { path: '/daypasses',    label: t('nav_daypasses'),    icon: '🏊' },

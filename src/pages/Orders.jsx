@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Orders, Products, Discounts, Rooms, Ingredients, InventoryMovements } from '../api/entities'
 import { supabase } from '../api/supabase'
@@ -9,9 +9,9 @@ const TAX_RATE = 0.07
 const TIP_OPTIONS = [0, 10, 15, 20]
 
 const nextStatus = {
-  pending: 'preparing',
+  pending:   'preparing',
   preparing: 'served',
-  served: 'paid',
+  served:    'paid',
 }
 
 async function descontarInventario(items, orderId) {
@@ -38,6 +38,7 @@ async function descontarInventario(items, orderId) {
   }
 }
 
+// ─── Items Editor ─────────────────────────────────────────────────────────────
 function ItemsEditor({ items, setItems, products, discounts, tipPercent = 0 }) {
   const { t } = useTranslation()
   const [search, setSearch] = useState('')
@@ -54,6 +55,7 @@ function ItemsEditor({ items, setItems, products, discounts, tipPercent = 0 }) {
     coffee:      t('cat_coffee'),
     side:        t('cat_side'),
     special:     t('cat_special'),
+    bbq:         t('cat_bbq') || 'BBQ / Asados',
   }
 
   const available = products.filter(p =>
@@ -112,7 +114,7 @@ function ItemsEditor({ items, setItems, products, discounts, tipPercent = 0 }) {
     }))
   }
 
-  const setNotes = (productId, notes) =>
+  const setItemNotes = (productId, notes) =>
     setItems(items.map(i => i.product_id === productId ? { ...i, notes } : i))
 
   const subtotal      = items.reduce((s, i) => s + i.quantity * i.unit_price, 0)
@@ -124,6 +126,7 @@ function ItemsEditor({ items, setItems, products, discounts, tipPercent = 0 }) {
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+      {/* Left — product picker */}
       <div>
         <input
           placeholder={t('orders_search_prod')}
@@ -157,6 +160,7 @@ function ItemsEditor({ items, setItems, products, discounts, tipPercent = 0 }) {
         </div>
       </div>
 
+      {/* Right — items in order */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 600, color: 'white' }}>
           {t('orders_in_order')} ({items.length})
@@ -199,7 +203,7 @@ function ItemsEditor({ items, setItems, products, discounts, tipPercent = 0 }) {
                 <input
                   placeholder={t('orders_notes_item')}
                   value={item.notes || ''}
-                  onChange={e => setNotes(item.product_id, e.target.value)}
+                  onChange={e => setItemNotes(item.product_id, e.target.value)}
                   style={{ width: '100%', fontSize: 12, padding: '4px 8px', borderRadius: 6, border: '1px solid #1a3330', background: '#0f1f1c', color: '#ccc', boxSizing: 'border-box' }}
                 />
                 <p style={{ margin: '6px 0 0', fontSize: 13, fontWeight: 700, color: 'white', textAlign: 'right' }}>
@@ -243,30 +247,50 @@ const btnSmall = {
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 }
 
+// ─── OrderModal ───────────────────────────────────────────────────────────────
 function OrderModal({ open, onClose, order, products, discounts, rooms, currentUser }) {
   const queryClient = useQueryClient()
   const { t } = useTranslation()
   const isEdit = !!order
 
-  const [tableNumber, setTableNumber]   = useState(order?.table_number?.toString() || '')
-  const [customerName, setCustomerName] = useState(order?.customer_name || '')
-  const [roomId, setRoomId]             = useState(order?.room_id || '')
-  const [notes, setNotes]               = useState(order?.notes || '')
-  const [items, setItems]               = useState(order?.items || [])
+  const [tableNumber, setTableNumber]   = useState('')
+  const [customerName, setCustomerName] = useState('')
+  const [roomId, setRoomId]             = useState('')
+  const [notes, setNotes]               = useState('')
+  const [items, setItems]               = useState([])
   const [tipPercent, setTipPercent]     = useState(0)
+
+  // ── Reset state when order changes (fix: editar no borra anterior) ──────────
+  useEffect(() => {
+    if (open) {
+      setTableNumber(order?.table_number?.toString() || '')
+      setCustomerName(order?.customer_name || '')
+      setRoomId(order?.room_id || '')
+      setNotes(order?.notes || '')
+      setTipPercent(0)
+      // Cargar los ítems existentes de la orden al editar
+      setItems(order?.items ? JSON.parse(JSON.stringify(order.items)) : [])
+    }
+  }, [open, order])
 
   const occupiedRooms = rooms.filter(r => r.status === 'occupied')
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      const result = isEdit ? await Orders.update(order.id, data) : await Orders.create(data)
-      if (!isEdit && result.data?.id) await descontarInventario(data.items, result.data.id)
-      return result
+      if (isEdit) {
+        // Al editar: solo actualiza, no descuenta inventario de nuevo
+        return await Orders.update(order.id, data)
+      } else {
+        // Al crear: descuenta inventario
+        const result = await Orders.create(data)
+        if (result.data?.id) await descontarInventario(data.items, result.data.id)
+        return result
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       queryClient.invalidateQueries({ queryKey: ['ingredients'] })
-      toast.success(isEdit ? t('orders_modal_edit') : t('orders_modal_new'))
+      toast.success(isEdit ? 'Order updated' : 'Order created')
       onClose()
     },
     onError: (e) => toast.error('Error: ' + e.message),
@@ -282,13 +306,13 @@ function OrderModal({ open, onClose, order, products, discounts, rooms, currentU
     const total         = afterDiscount + tax + tip
     const selectedRoom  = rooms.find(r => r.id === roomId)
     saveMutation.mutate({
-      table_number: tableNumber ? parseInt(tableNumber) : null,
-      customer_name: customerName || null,
-      room_id: roomId || null,
-      room_number: selectedRoom?.room_number || null,
+      table_number:    tableNumber ? parseInt(tableNumber) : null,
+      customer_name:   customerName || null,
+      room_id:         roomId || null,
+      room_number:     selectedRoom?.room_number || null,
       items, subtotal, discount_amount: totalDiscount, tax, tip, total, notes,
-      waiter_name: currentUser?.full_name || currentUser?.email || '',
-      status: order?.status || 'pending',
+      waiter_name:     currentUser?.full_name || currentUser?.email || '',
+      status:          order?.status || 'pending',
     })
   }
 
@@ -303,6 +327,13 @@ function OrderModal({ open, onClose, order, products, discounts, rooms, currentU
           </h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#7ab8a8', fontSize: 20, cursor: 'pointer' }}>✕</button>
         </div>
+
+        {isEdit && (
+          <div style={{ background: '#1a3330', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#7ab8a8' }}>
+            ✏️ {t('orders_edit_hint') || 'Editing order — existing items are preserved. Add new products or adjust quantities.'}
+          </div>
+        )}
+
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
           <div>
             <label style={labelStyle}>{t('orders_table')}</label>
@@ -322,7 +353,9 @@ function OrderModal({ open, onClose, order, products, discounts, rooms, currentU
             </select>
           </div>
         </div>
+
         <ItemsEditor items={items} setItems={setItems} products={products} discounts={discounts} tipPercent={tipPercent} />
+
         <div style={{ marginTop: 16 }}>
           <label style={labelStyle}>{t('orders_tip_label')}</label>
           <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
@@ -337,11 +370,13 @@ function OrderModal({ open, onClose, order, products, discounts, rooms, currentU
             ))}
           </div>
         </div>
+
         <div style={{ marginTop: 16 }}>
           <label style={labelStyle}>{t('orders_notes')}</label>
           <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder={t('orders_notes_ph')} rows={2}
             style={{ ...inputStyle, resize: 'vertical', height: 'auto' }} />
         </div>
+
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
           <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid #1a3330', background: 'none', color: '#7ab8a8', cursor: 'pointer', fontSize: 14 }}>
             {t('orders_cancel_btn')}
@@ -358,6 +393,7 @@ function OrderModal({ open, onClose, order, products, discounts, rooms, currentU
 const labelStyle = { display: 'block', fontSize: 12, color: '#7ab8a8', marginBottom: 4 }
 const inputStyle = { width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #1a3330', background: '#0a1512', color: 'white', fontSize: 13, boxSizing: 'border-box' }
 
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function OrdersPage() {
   const queryClient = useQueryClient()
   const { t } = useTranslation()
@@ -366,11 +402,11 @@ export default function OrdersPage() {
   const [editingOrder, setEditingOrder] = useState(null)
 
   const statusConfig = {
-    pending:   { label: t('status_pending'),   color: '#f59e0b' },
-    preparing: { label: t('status_preparing'), color: '#3b82f6' },
-    served:    { label: t('status_served'),    color: '#10b981' },
-    paid:      { label: t('status_paid'),      color: '#8b5cf6' },
-    cancelled: { label: t('status_cancelled'), color: '#ef4444' },
+    pending:   { label: t('status_pending'),   color: '#f59e0b', bg: '#fef3c7' },
+    preparing: { label: t('status_preparing'), color: '#3b82f6', bg: '#dbeafe' },
+    served:    { label: t('status_served'),    color: '#10b981', bg: '#d1fae5' },
+    paid:      { label: t('status_paid'),      color: '#8b5cf6', bg: '#ede9fe' },
+    cancelled: { label: t('status_cancelled'), color: '#ef4444', bg: '#fee2e2' },
   }
 
   const { data: orders = [], isLoading } = useQuery({
@@ -392,7 +428,7 @@ export default function OrdersPage() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => Orders.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['orders'] }); toast.success(t('status_paid')) },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['orders'] }),
   })
   const deleteMutation = useMutation({
     mutationFn: (id) => Orders.delete(id),
@@ -404,91 +440,123 @@ export default function OrdersPage() {
   const openEdit = (order) => { setEditingOrder(order); setModalOpen(true) }
 
   return (
-    <div>
+    <div style={{ fontFamily: 'system-ui, sans-serif' }}>
+      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 600, margin: 0, color: 'white' }}>{t('orders_title')}</h1>
-          <p style={{ color: '#7ab8a8', fontSize: 14, margin: '4px 0 0' }}>{t('orders_subtitle')}</p>
+          <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: '#111' }}>{t('orders_title')}</h1>
+          <p style={{ color: '#6b7280', fontSize: 14, margin: '4px 0 0' }}>{t('orders_subtitle')}</p>
         </div>
         <button onClick={openNew} style={{ padding: '9px 20px', borderRadius: 10, border: 'none', background: '#1d9e75', color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
           {t('orders_new')}
         </button>
       </div>
 
+      {/* Filters */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
         {['all', 'pending', 'preparing', 'served', 'paid', 'cancelled'].map(s => (
           <button key={s} onClick={() => setFilter(s)} style={{
-            padding: '6px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13,
-            background: filter === s ? '#1d9e75' : '#1a3330',
-            color: filter === s ? 'white' : '#7ab8a8',
+            padding: '6px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500,
+            background: filter === s ? '#1d9e75' : '#f3f4f6',
+            color: filter === s ? 'white' : '#374151',
           }}>
             {s === 'all' ? `${t('orders_all')} (${orders.length})` : `${statusConfig[s]?.label} (${orders.filter(o => o.status === s).length})`}
           </button>
         ))}
       </div>
 
+      {/* Orders list */}
       {isLoading ? (
-        <p style={{ color: '#7ab8a8' }}>{t('loading')}</p>
+        <p style={{ color: '#6b7280' }}>{t('loading')}</p>
       ) : filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 0', color: '#7ab8a8' }}>{t('orders_no_orders')}</div>
+        <div style={{ textAlign: 'center', padding: '60px 0', color: '#9ca3af' }}>{t('orders_no_orders')}</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {filtered.map(order => {
-            const status = statusConfig[order.status] || statusConfig.pending
+            const status        = statusConfig[order.status] || statusConfig.pending
             const totalDiscount = order.items?.reduce((s, i) => s + (i.discount_amount || 0), 0) || order.discount_amount || 0
+            const hasNotes      = order.notes && order.notes.trim() !== ''
+            const itemsWithNotes = order.items?.filter(i => i.notes && i.notes.trim() !== '') || []
+
             return (
-              <div key={order.id} style={{ background: '#0f1f1c', borderRadius: 12, padding: '16px 20px', border: '1px solid #1a3330' }}>
+              <div key={order.id} style={{
+                background: 'white', borderRadius: 12, padding: '16px 20px',
+                border: `1px solid ${order.status === 'pending' ? '#fde68a' : order.status === 'preparing' ? '#bfdbfe' : '#e5e7eb'}`,
+                boxShadow: '0 1px 4px rgba(0,0,0,.05)',
+              }}>
+                {/* Order header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
                   <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 10, background: '#1a3330', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: 'white' }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 10, background: status.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: status.color, flexShrink: 0 }}>
                       {order.table_number ? `M${order.table_number}` : order.room_number ? `H${order.room_number}` : '#'}
                     </div>
                     <div>
-                      <p style={{ margin: 0, fontWeight: 500, color: 'white' }}>{order.customer_name || `Table ${order.table_number || '-'}`}</p>
-                      <p style={{ margin: '2px 0 0', fontSize: 13, color: '#7ab8a8' }}>
+                      <p style={{ margin: 0, fontWeight: 700, color: '#111', fontSize: 15 }}>{order.customer_name || `Table ${order.table_number || '-'}`}</p>
+                      <p style={{ margin: '2px 0 0', fontSize: 13, color: '#6b7280' }}>
                         {order.items?.length || 0} {t('orders_items')} · {order.waiter_name || t('orders_unassigned')}
+                        {order.room_number && ` · Room ${order.room_number}`}
                       </p>
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, background: status.color + '20', color: status.color }}>
+                    <span style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: status.bg, color: status.color }}>
                       {status.label}
                     </span>
-                    <span style={{ fontWeight: 700, fontSize: 16, color: 'white' }}>${(order.total || 0).toFixed(2)}</span>
+                    <span style={{ fontWeight: 800, fontSize: 16, color: '#111' }}>${(order.total || 0).toFixed(2)}</span>
                   </div>
                 </div>
+
+                {/* Items detail */}
                 {order.items?.length > 0 && (
-                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #1a3330' }}>
+                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #f3f4f6' }}>
                     {order.items.map((item, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#7ab8a8', padding: '2px 0' }}>
-                        <span>
-                          {item.quantity}× {item.product_name}
-                          {item.discount_name && <span style={{ color: '#1d9e75', marginLeft: 6 }}>({item.discount_name} -{item.discount_percentage}%)</span>}
-                        </span>
-                        <span>${(item.line_total ?? item.quantity * item.unit_price).toFixed(2)}</span>
+                      <div key={i}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#374151', padding: '2px 0' }}>
+                          <span>
+                            <strong>{item.quantity}×</strong> {item.product_name}
+                            {item.discount_name && <span style={{ color: '#1d9e75', marginLeft: 6, fontSize: 12 }}>({item.discount_name} -{item.discount_percentage}%)</span>}
+                          </span>
+                          <span style={{ color: '#111', fontWeight: 600 }}>${(item.line_total ?? item.quantity * item.unit_price).toFixed(2)}</span>
+                        </div>
+                        {/* Notas del ítem — visibles para cocina */}
+                        {item.notes && item.notes.trim() !== '' && (
+                          <p style={{ margin: '1px 0 4px 16px', fontSize: 12, color: '#f59e0b', fontStyle: 'italic' }}>
+                            📝 {item.notes}
+                          </p>
+                        )}
                       </div>
                     ))}
                     {totalDiscount > 0 && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#1d9e75', padding: '4px 0', marginTop: 4, borderTop: '1px solid #1a333060' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#1d9e75', padding: '4px 0', marginTop: 4, borderTop: '1px solid #f3f4f6' }}>
                         <span>{t('orders_discounts')}</span><span>-${totalDiscount.toFixed(2)}</span>
                       </div>
                     )}
                     {order.tax > 0 && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#7ab8a8', padding: '2px 0' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#6b7280', padding: '2px 0' }}>
                         <span>{t('orders_itbms')}</span><span>${order.tax.toFixed(2)}</span>
                       </div>
                     )}
                     {order.tip > 0 && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#7ab8a8', padding: '2px 0' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#6b7280', padding: '2px 0' }}>
                         <span>{t('orders_tip_label')}</span><span>${order.tip.toFixed(2)}</span>
                       </div>
                     )}
                   </div>
                 )}
+
+                {/* Notas generales de la orden — destacadas para cocina */}
+                {hasNotes && (
+                  <div style={{ marginTop: 10, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: 14 }}>📋</span>
+                    <p style={{ margin: 0, fontSize: 13, color: '#92400e', fontWeight: 500 }}>{order.notes}</p>
+                  </div>
+                )}
+
+                {/* Action buttons */}
                 <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
                   {order.status === 'pending' && (
-                    <button onClick={() => openEdit(order)} style={{ ...actionBtn, background: '#1a3330', color: '#7ab8a8' }}>
-                      {t('orders_edit')}
+                    <button onClick={() => openEdit(order)} style={{ ...actionBtn, background: '#f3f4f6', color: '#374151' }}>
+                      ✏️ {t('orders_edit')}
                     </button>
                   )}
                   {nextStatus[order.status] && (
@@ -497,12 +565,12 @@ export default function OrdersPage() {
                     </button>
                   )}
                   {order.status !== 'cancelled' && order.status !== 'paid' && (
-                    <button onClick={() => updateMutation.mutate({ id: order.id, data: { status: 'cancelled' } })} style={{ ...actionBtn, background: '#1a3330', color: '#ef4444' }}>
+                    <button onClick={() => updateMutation.mutate({ id: order.id, data: { status: 'cancelled' } })} style={{ ...actionBtn, background: '#fff5f5', color: '#ef4444', border: '1px solid #fee2e2' }}>
                       {t('orders_cancel')}
                     </button>
                   )}
                   {(order.status === 'paid' || order.status === 'cancelled') && (
-                    <button onClick={() => { if (confirm(t('orders_confirm_del'))) deleteMutation.mutate(order.id) }} style={{ ...actionBtn, background: '#1a3330', color: '#ef4444' }}>
+                    <button onClick={() => { if (confirm(t('orders_confirm_del'))) deleteMutation.mutate(order.id) }} style={{ ...actionBtn, background: '#fff5f5', color: '#ef4444', border: '1px solid #fee2e2' }}>
                       {t('orders_delete')}
                     </button>
                   )}
@@ -526,4 +594,4 @@ export default function OrdersPage() {
   )
 }
 
-const actionBtn = { padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13 }
+const actionBtn = { padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }
